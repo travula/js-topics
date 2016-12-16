@@ -1,0 +1,95 @@
+#+title:  Actors in JS
+
+* Introduction
+This note tries out the implementation of actors suggested
+in Schumacher's blog on [[http://www.dalnefre.com/wp/2014/03/actors-in-javascript/][It's Actors all the way down]].   
+
+* Implementation
+
+The first elementary building block is the function
+=invokeLater= that simply puts a function on the Javascript
+runtime queue.   Here =callback= is a function that takes
+one argument that is a Javascript object.  
+
+#+BEGIN_SRC js :tangle actor.js
+var invokeLater = function (thunk) {setTimeout(thunk, 0);}
+#+END_SRC
+
+
+The central piece in building actors is the =send=
+primitive.  =send(a, msg, callback)= sends the message =msg=
+to actor =a=.  =callback= is a function of one argument that
+is invoked by the actor =a= after it processes =msg=.
+=callback= is typically used to 'return' a value.   
+
+#+BEGIN_SRC js :tangle no
+var send = function(recipient, message, callback) {
+    invokeLater(function () {
+        var returnValue = recipient.handler(message);
+        callback(returnValue); // synchronous!!!
+    });
+};
+#+END_SRC
+
+A different protocol, more faithful to the spirit of actors
+is for /all/ communication to be asynchronous, including the
+callback. 
+
+
+#+BEGIN_SRC js :tangle actor.js
+var send = function(recipient, message) {
+    invokeLater(function () {
+        recipient.handler(message);
+    });
+};
+#+END_SRC
+
+
+* Example
+
+Consider two agents A and B.  A sends message m to B.  B
+computes and B sends result to A.
+
+With functions, this is simply a call =B.m()= from =A=.  On
+the other hand, if =A= and =B= are actors, then we have
+
+ - A sends a message =m= to B ::   
+
+#+BEGIN_SRC js :tangle example.js
+var A = { 
+   name : "A",
+   handler : function(message) {
+            	console.log("A: got result  " + message.answer + 
+							"from "+ message.sender.name);
+   },
+   run : function(n) {
+	   console.log("A: run");
+	   send(B, {arg: n, sender: A});
+	   console.log("A: sent msg to B");
+   }
+}
+
+var B = {
+     name : "B",
+     handler : function(message) {
+		 console.log("B: received message from A");
+		 send(message.sender, {answer: message.arg + 1, sender : B});
+		 console.log("B: sent msg to A");
+	 }
+}
+
+#+END_SRC
+
+#+BEGIN_SRC html :tangle example.html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Simple Actor Example</title>
+  <script type="text/javascript" src="actor.js"></script>
+  <script type="text/javascript" src="example.js"></script>
+</head>
+<body>
+  <p> Running Example
+  </p>
+#+END_SRC

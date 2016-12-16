@@ -1,0 +1,384 @@
+#+title:  Game with Progress Bar
+#+SETUPFILE: org-templates/level-0.org
+#+HTML_LINK_HOME: .index.html
+#+HTML_LINK_UP:   ./index.html
+
+* Introduction
+
+This little example is an implementation of a simple game.
+The purpose of building this game is to illustrate how to
+build a small system using reactive components in a modular
+way.
+
+* Informal Description of Game
+As the game is initialized, the user is prompted to play the
+game by pressing the start button.  Then, he is asked to
+input a non-negative number (let's call this the total).
+Subsequently, the user inputs a series of non-negative
+numbers (one at a time).  The game is over when the sum of
+the inputs is equal or exceeds the total.
+
+The display shows a 'progress bar' as the numbers fill up
+the total.
+
+* Game Locations (or screen shots)
+The game steps through four /locations/.  The view in each
+is location below:
+
+** Init
+
+[[./img/progress-bar-0.png]]
+
+This is a picture of what shows up when the game
+initializes.   The game starts when the user presses the
+=START=  button. 
+
+** Reading Total
+
+In this location, the user is prompted for a number (the
+=total=).  Once the user enters the total, he is presses the
+=SUBMIT TOTAL= button. 
+
+[[./img/progress-bar-1.png]]
+
+** Filling
+
+In this location, the user is prompted to enter a number
+that increments the sum (of all the numbers entered so far).
+The current sum as a percentage of the total is indicated in
+the progress bar.  Once the user enters the number, he
+presses the =INCR SUM= button.
+
+[[./img/progress-bar-2.png]]
+
+** Done
+In this location, the game is over.  The progress bar shows
+100%.  The user may play the game again by pressing the PLAY
+AGAIN button.
+
+[[./img/progress-bar-3.png]]
+
+
+* The first cut:  command line interaction
+
+** Motivation
+In the first cut, we wish to keep things really simple.  We
+completely eliminate the browser view and only 'interact'
+with the game via a application programming interface
+(API). 
+
+** Design
+
+*** Game State Variables
+The game has three internal variables. 
+#+BEGIN_EXAMPLE
+Locations = {init, reading_total, filling, done}
+game.vars :  {
+  location:  Locations
+  total: nat
+  sum: nat
+}
+#+END_EXAMPLE
+
+*** Game input space
+Interaction with the game happens through input events.  An
+input event is an object whose with a tag that
+identifies the event, followed by additional elements.
+
+#+BEGIN_EXAMPLE
+INPUT_EVENT_TYPE = {load, start, submit-total, incr-sum, play-again}
+input event = {type: INPUT_EVENT_TYPE, params: Object}
+#+END_EXAMPLE
+
+**** Input Parameters
+
+ - =load= :: nothing
+ - =start= :: nothing
+ - =submit-total= :: ={total: INT}=
+ - =incr-sum= :: ={incremental-value: INT}=
+ - =play-again= :: nothing
+
+*** Output space
+
+The output space consists of objects. 
+
+*** Output function
+This function maps the state of the game to an object.
+
+ - =init= :: {title = "Welcome!", button="START"}
+ - = 
+
+
+The game is a system with internal state, view (whatever is
+seen on the screen) and user controls (buttons, text boxes,
+etc.)
+
+From a systems perspective, the DOM tree and any additional
+data structures or variables are the game's state.
+
+
+
+* Architecture
+
+We implement   a simple MVC architecture.
+
+There are three components: A model, a view and a
+controller. 
+
+Each of the above is defined as a system.  
+
+** Model
+ - State :: The model holds a list.
+#+BEGIN_EXAMPLE
+ls : List[nat]
+#+END_EXAMPLE
+ - Initial state :: empty array
+#+BEGIN_EXAMPLE
+ls : []
+#+END_EXAMPLE
+ - Input :: a number
+#+BEGIN_EXAMPLE
+u : int
+#+END_EXAMPLE
+ - Output :: nothing 
+ - update function :: 
+#+BEGIN_EXAMPLE
+f_M: X_M, U_M -> X_M
+f_M(x, u) = append(x, [u])
+#+END_EXAMPLE
+
+** View
+ - State :: 
+#+BEGIN_EXAMPLE
+var q : {init, update, done}
+var total : nat
+var cur : nat
+#+END_EXAMPLE
+
+ - Initial state ::
+#+BEGIN_EXAMPLE
+q = init
+total = 0
+cur = 0
+#+END_EXAMPLE
+
+ - Input ::
+#+BEGIN_EXAMPLE
+u : nat
+#+END_EXAMPLE
+
+ - Update ::
+#+BEGIN_EXAMPLE
+f_V(u) {
+   case q of 
+    init  =>  total = u; q = update
+    update => cur = cur+u; 
+              if cur >= total then
+                 q = done
+    done => 
+
+#+END_EXAMPLE
+
+ - Output ::
+
+#+BEGIN_EXAMPLE
+y_V : {START, TOTAL,  NEXT(percentage), DONE}
+#+END_EXAMPLE
+ - Output function ::
+#+BEGIN_EXAMPLE
+h_V: x_V -> y_V
+h_V(init, _, _) = START
+h_V(done, _, _) = DONE
+h_V(update,total, cur) = NEXT(cur/total*100) 
+#+END_EXAMPLE
+ 
+|-------+-----------+---+---+---|
+| TOTAL | input box |   |   |   |
+|-------+-----------+---+---+---|
+| NEXT  | input box |   |   |   |
+|-------+-----------+---+---+---|
+| DONE  | no box    |   |   |   |
+|-------+-----------+---+---+---|
+
+** DOM
+ - State space::
+#+BEGIN_EXAMPLE
+#+END_EXAMPLE
+
+ - Initial state ::
+#+BEGIN_EXAMPLE
+<div class="bar">
+0
+</div>
+#+END_EXAMPLE
+
+
+ - Input :: 
+#+BEGIN_EXAMPLE
+u : number between 0 and 100
+#+END_EXAMPLE
+
+ - update :: 
+
+
+* Implementation
+
+** HTML component =D=
+
+- State 
+#+BEGIN_EXAMPLE
+The html Dom data structure.
+macro-state : Game_Macro_State
+#+END_EXAMPLE
+
+- Input Events :: 
+#+BEGIN_EXAMPLE
+U_D = {SUBMIT-START, SUBMIT-TOTAL, SUBMIT-NEXT}
+#+END_EXAMPLE
+
+- Update Function ::
+#+BEGIN_EXAMPLE
+#+END_EXAMPLE
+
+*** Code
+
+#+BEGIN_SRC html :tangle game.html
+<!doctype html5>
+<html>
+<head>
+<title>Game!</title>
+<link rel="stylesheet" type="text/css" href="game.css">
+<script type="text/javascript" src="game.js"></script>
+<script type="text/javascript" src="lib/jquery.min.js"></script>
+</head>
+<body>
+  <p> Welcome to the game!</p>
+  <div id="game"  macro-state="start">
+
+  <div class="game-state" id="start">
+    <button type="button" id="submit-start-button">Start</button>
+  </div>
+
+  <div class="game-state" id="total">
+    <div> Enter the Total:
+      <input id="inp-total-box" type="text" name="Total"></input>
+    </div>
+    <div>
+      <button type="button" id="submit-total-button">Submit</button>
+    </div>
+  </div>
+
+   <div class="game-state" id="next">
+    <progress id="progress-bar-filling" max="100" value="0"></progress>
+    <div> Enter next number:
+      <input id="inp-next-box" type="text" name="next"></input>
+    </div>
+    <div>
+      <button type="button" id="submit-next-button">Submit</button>
+    </div>
+   </div>
+
+   <div class="game-state" id="done">
+    <progress id="progress-bar-done" max="100" value="100"></progress>
+    <div> DONE!
+    </div>
+    <div>
+      <button type="button" id="submit-play-again-button">Play Again</button>
+    </div>
+   </div>
+  </div>
+</body>
+</html>
+#+END_SRC
+
+** Event Handler (update) Functions
+#+BEGIN_SRC js
+  on_start_handler = function() {
+	  screen_control.state('total');
+  }
+
+  on_submit_total_handler = function() {
+  	  var total_str = $('#inp-total-box').innerHTML;
+      var total_int = parseInt(total_str);
+	  // error checking will be done later
+	  screen_control.state('next');
+	  }
+
+#+END_SRC
+** CSS
+By default, none of the screens of the games are displayed.
+#+BEGIN_SRC css :tangle game.css
+.game-state {
+  display: none;
+}
+#+END_SRC
+
+** JS
+#+BEGIN_SRC js :tangle game.js
+// Usage
+// screen_control.state('start');
+
+// Create Game object
+
+game = {};
+game.screen_state = 
+	function() {
+		var cur_state = 'start';
+		var view = 
+			function(s) {
+ 				$('#'+cur_state).css({display: "none"});
+				$('#'+s).css({display: "block"});
+				cur_state = s;
+			}
+		var a = {};
+		a.view = view;
+		return a;
+	}();
+
+game.init_event = function() {
+    game.vars = {location: 'start', total: 0, sum: 0};
+	game.set_screen(game.vars.location);
+	};
+
+game.handle_submit_start_event = function() {
+	game.vars.location = 'total';
+	game.set_screen(game.vars.location);
+}
+
+game.handle_submit_total_event = function() {
+	// parse the total string
+	game.vars.total = parseInt($('#inp-total-box').innerHTML);
+	game.vars.location = 'next';
+	game.set_screen(game.vars.location);
+
+game.handle_submit_next_event = function() {
+	// parse the total string
+    var next_value = parseInt($('#inp-next-box').innerHTML);
+	game.vars.sum += next_value;
+	if (game.vars.sum >= game.vars.total) {
+		game.vars.location = 'done';
+		game.set_screen(game.vars.location);
+	} 
+	else {
+		var percentage = 100.0*(game.vars.sum/game.vars.total);
+        $('#progress-bar-filling').innerHTML = percentage;
+		game.vars.location = 'next';
+		game.set_screen(game.vars.location);
+	}
+
+game.handle.submit_play_again_event = function() { 
+    game.vars = {location: 'start', total: 0, sum: 0};
+	game.set_screen(game.vars.location);
+}
+
+	
+game.handle_next_event
+game.handle_done_event 
+
+
+screen_control = sc_maker();
+
+document.onload = function() {
+// this is where the wiring happens!
+}
+#+END_SRC

@@ -1,0 +1,91 @@
+#+title:  Reactive Model for Web Programming
+
+* Introduction
+
+We discuss the basics of the reactive model of computing as
+used in building web applications.
+
+* Basics: System
+
+The fundamental idea of reactive systems is the idea of a
+system (aka component).  A system is a tuple consisting of
+the following:
+
+ - A set of /state variables/, each ranging over a /domain/
+   The set of values of the variables at a given time is the
+   current /state/ of the system.  The set of all possible
+   values of the state is called the /state space/.
+
+ - A set of /input actions/.  The purpose of an action is to
+   (potentially) effect a change in the state of the
+   system.  
+
+ - An /update function/ that maps each state and input
+   action to a state.
+
+ - A set of /output actions/.  An output action may be fed
+   as input to another system.
+
+* Implementation of Systems: Objects vs. Actors
+
+It is convenient to implement a system as an object.  The
+state variables are the object's internal variables.  Each
+input action corresponds to a method call.  The output
+actions roughly correspond to calls made by the object to
+the methods of other objects.  However, the input and output
+actions are /asynchronous/.  The objects now are actors.
+Each actor is designed to /react/ to messages.   The
+reaction may involve either updating the local state of the
+actor, or sending a message to other actors.  
+
+Fundamental to understanding actors is the notion of
+asynchronous computation.
+
+
+* Example:  A simple object as a system
+
+Consider a system whose system consists of the following:
+
+ - State variable(s) :: A single variable of type integer
+      called =sum=. 
+
+ - Initialization :: The initial value of sum is 0. 
+
+ - Input actions :: 
+
+     + =incr= :: 
+ 
+     + =decr= :: 
+
+     + =reset= :: 
+
+ - The update function  is defined as follows:
+
+
+     + update on receiving =incr= :: increments =sum= by 1 unless sum
+          is equal to 10.  
+
+     + update on receiving =decr= :: decrements =sum= by 1 unless the sum is
+          equal to -10. 
+
+     + update on receiving =reset= :: sets =sum= to 0.
+
+
+ - Output actions ::  
+
+    + =log= method of the =console= object.
+    + =write= method on the =DOM= object.
+
+* References
+
+ - Schumacher's blog on  [[http://www.dalnefre.com/wp/2014/03/actors-in-javascript/][It's Actors all the way down]]
+
+ -  Thomas Hunter's slides on the [[https://thomashunter.name/blog/the-javascript-event-loop-presentation/][Javascript Event Loop model]]
+
+ - Carbon Five's  [[http://blog.carbonfive.com/2013/10/27/the-javascript-event-loop-explained/][Javascript Event Loop Model Explained]]
+
+ - Mozilla's pages on [[https://developer.mozilla.org/en/docs/Web/JavaScript/EventLoop][Javascript Event Loop]]
+
+
+
+
