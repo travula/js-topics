@@ -1,40 +1,137 @@
-#+title:  Actors in JS
+#+title:  An implementation of Actors in Javascript
 
 * Introduction
-This note tries out the implementation of actors suggested
-in Schumacher's blog on [[http://www.dalnefre.com/wp/2014/03/actors-in-javascript/][It's Actors all the way down]].   
 
-* Implementation
+This note builds an implementation of actors based on the
+blog [[http://www.dalnefre.com/wp/2014/03/actors-in-javascript/][It's Actors all the way down]], but with one important
+difference (see below).
 
-The first elementary building block is the function
-=invokeLater= that simply puts a function on the Javascript
-runtime queue.   Here =callback= is a function that takes
-one argument that is a Javascript object.  
+* Actors
+
+** An Actor is an object with a =handler=
+
+An actor is an object.  Each actor carries with it a name,
+other local state, and a =handler=, which is a function of
+one argument, a message.  A handler takes a message and does
+something: typically, it modifies its local state or sends a
+message to other actors.
+
+** An actor sends messages to another actor
+
+An actor =A= can /send/ a message =m= to an actor =B=.  A
+send is different from a function call.  A send never
+returns.  Hence there is no need for =A= to wait for =B= to
+'finish' processing the message it sent to =B=.  A /send/ is
+thus /asynchronous/.  Contrast this with a function call,
+where =A= waits until =B= completes the processing of the
+message =m=.  A function or method call, is thus
+/synchronous/.
+
+** SMS vs. Phone calls
+
+The best way to understand the difference between a send and
+a call is to consider the analogy between an SMS (or a
+WhatsApp) message versus a phone call.  SMS is asynchronous
+(you simply send the message and move on to other things). 
+A phone call is synchronous (you're waiting for the other
+party to pick up the call).
+
+
+* Why Actors?
+
+The function (also called subroutine) call has been the
+mainstay of computer programming languages.  The function
+call abstraction was ideally suited to stand alone programs
+running on single machines.  However, it soon became evident
+that programs running /concurrently/ could be more efficient
+than those running sequentially.  These programs relied on
+the model where different parts of the programs (threads)
+would run concurrently and share reading and writing of
+memory.  Without concurrent execution, little could be
+assumed about the /order/ in which operations happen.
+Without careful coordination, such concurrent programs could
+leave the computation in an inconsistent state.  Consider
+for example, two threads of execution, each trying to
+increment a shared variable =x=.  After the execution of
+both the threads, one expects =x= to be updated to =x+2=.
+With concurrent programs, it is not possible to guarantee
+this, unless the concurrency is controlled by stipulating
+sequential and exclusive access to the shared variable.
+This somewhat defeats the purpose of concurrency, and also
+has the potential of introducing other kinds of bugs like
+deadlocks, where nothing makes progress and the whole
+program is frozen.  (You will encounter concurrency in an
+Operating Systems course.)
+
+Modern day architectures are characterized by multiple
+programs distributed geographically or even within the same
+processors (cores).  In the geographically distributed case,
+the concept of shared memory makes no sense.  Instead
+computation requires communication via /message passing/
+between these processors.  Communicating with messages means
+no shared memory, so the complications of shared memory are
+obviated.  In addition, message passing could be made
+asynchronous, so a sender need not wait for a receiver.
+
+Another characteristic of modern programs is that they are
+/reactive/.  They react to events, like the arrival of a
+message, or the clicking of the mouse by a human.
+
+This leads us to Actors, which are small programs with local
+and private state, not shared with any other actor.  Actors
+communicate via asynchronous message passing.
+
+Actors have been around since 1973, but they were ahead of
+their time.  The increasingly distributed and reactive
+nature of computing today has resulted in a resurgence of
+interest in Actors.
+
+
+
+* Javascript's execution model
+
+A good description of Javascript's execution model (called
+the Event Loop) may be found in the following articles:
+
+ - Thomas Hunter's slides on the [[https://thomashunter.name/blog/the-javascript-event-loop-presentation/][Javascript Event Loop model]]
+
+ - Carbon Five's  [[http://blog.carbonfive.com/2013/10/27/the-javascript-event-loop-explained/][Javascript Event Loop Model Explained]]
+
+ - Mozilla's pages on [[https://developer.mozilla.org/en/docs/Web/JavaScript/EventLoop][Javascript Event Loop]]
+
+In brief, Javascript's execution model consists of a queue
+of /thunks/.  A thunk is a function of no arguments.  The
+function at the front of the queue is picked and run.  In
+the process, the function may call other functions.  Call
+frames are stored on a stack.  Once the function runs to
+completion, the next thunk on the queue is executed.  A
+thunk may be added to the execution queue by invoking the
+=setTimeout= function.  =setTimeout(thunk)= adds =thunk= to
+the execution queue.  An optional second argument =ms=
+specifies the number of milliseconds /after/ which the
+argument is added to the queue.  The default (=ms= = 0) adds
+the thunk to the queue immediately.
+
+* A Javascript Implementation of Actors
+
+The first building block is the function =invokeLater= that
+uses =setTimeout= to simply put a thunk on the Javascript
+execution queue.
 
 #+BEGIN_SRC js :tangle actor.js
 var invokeLater = function (thunk) {setTimeout(thunk, 0);}
 #+END_SRC
 
+Two things are worth noting: First, the action of putting
+the thunk on the queue is usually a small amount of time.
+Second, the thunk itself isn't run; it is only queued for
+later execution.  
+
+** The =send= primitive
 
 The central piece in building actors is the =send=
-primitive.  =send(a, msg, callback)= sends the message =msg=
-to actor =a=.  =callback= is a function of one argument that
-is invoked by the actor =a= after it processes =msg=.
-=callback= is typically used to 'return' a value.   
-
-#+BEGIN_SRC js :tangle no
-var send = function(recipient, message, callback) {
-    invokeLater(function () {
-        var returnValue = recipient.handler(message);
-        callback(returnValue); // synchronous!!!
-    });
-};
-#+END_SRC
-
-A different protocol, more faithful to the spirit of actors
-is for /all/ communication to be asynchronous, including the
-callback. 
-
+primitive.  =send(a, msg)= sends the message =msg=
+to actor =a=.  
 
 #+BEGIN_SRC js :tangle actor.js
 var send = function(recipient, message) {
@@ -44,23 +141,31 @@ var send = function(recipient, message) {
 };
 #+END_SRC
 
+=send(recipient, message)= queues a thunk, /which when
+invoked/ will call the =recepient='s =handler= method 
+with =message= as an argument.
+
 
 * Example
 
-Consider two agents A and B.  A sends message m to B.  B
-computes and B sends result to A.
+Consider two actors =A= and =B=.  The interaction between
+=A= and =B= is simple: =A= sends a message to =B= whose
+payload includes a number, say =n=.  =B= sends =n+1= back to
+=A=.
 
-With functions, this is simply a call =B.m()= from =A=.  On
-the other hand, if =A= and =B= are actors, then we have
+Each actor is implemented as an object containing the fields
+=name= (for print identity) and =handler=, a function that
+takes a message and handles it.
 
- - A sends a message =m= to B ::   
+** The actor =A= 
 
+The =run=
 #+BEGIN_SRC js :tangle example.js
 var A = { 
    name : "A",
    handler : function(message) {
             	console.log("A: got result  " + message.answer + 
-							"from "+ message.sender.name);
+							" from "+ message.sender.name);
    },
    run : function(n) {
 	   console.log("A: run");
@@ -68,7 +173,9 @@ var A = {
 	   console.log("A: sent msg to B");
    }
 }
+#+END_SRC
 
+#+BEGIN_SRC js :tangle example.js
 var B = {
      name : "B",
      handler : function(message) {
@@ -80,6 +187,12 @@ var B = {
 
 #+END_SRC
 
+
+* Boilerplate HTML to run the example
+
+The boilerplate HTML file =example.html= loads the actor
+library and the example.
+
 #+BEGIN_SRC html :tangle example.html
 <!DOCTYPE html>
 <html>
@@ -90,6 +203,11 @@ var B = {
   <script type="text/javascript" src="example.js"></script>
 </head>
 <body>
-  <p> Running Example
+  <h1> Simple example showing message passing between Actors</h1>
+
+  <p> To run the Example on a Chrome Browser, Ctrl-Shift-J
+  to the JS console and invoke, for example,
+  A.run(5)</code>.
   </p>
 #+END_SRC
+

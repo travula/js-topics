@@ -1,10 +1,5 @@
 #+title:  Asynchronous Programming using Javascript
 
-* Introduction
-
-This note  is an introduction to async programming in
-Javascript.  
-
 * Javascript Execution Model
 
 Javascript's execution model consists of multiple runtimes.
