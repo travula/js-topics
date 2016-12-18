@@ -1,0 +1,173 @@
+#+title:  Event Handlers:  Incrementally Extending an Actor's reactive interface
+#+setupfile:  ../org-templates/level-1.org
+
+* Introduction
+
+The [[./actor-object.org][previous]] implementation of actors was based on the actor
+having a single =react= method.  The reactive interface of
+an actor is the set of messages to which it reacts.  For the
+actors defined previously, it is possible to dynamically
+extend the reactive interface by installing a new method
+against the =react= field of an actor. 
+
+There is however, a more incremental way of doing this.  For
+this, actors come equipped with an =addHandler= method that
+binds a message with /handler/, a function executed as
+reaction to the particular message.
+
+* Message structure
+Let us assume that a message has three components: 
+
+ - =name=  :: this is a string
+
+ - =sender= :: this is an actor
+
+ - =data= :: this is an object
+
+* Actor constructor
+
+Actors are built using the =Actor= constructor.  It takes an
+=id=, and maintains a private =handlers= object that stores
+messages and their handlers. 
+
+
+#+BEGIN_SRC js :tangle extensible-actor.js
+var Actor = function(id) {
+    var handlers = {};
+#+END_SRC
+
+* =react=
+
+The =react= method locates the message handler corresponding
+to the message's name from the private =handlers= object.
+It then applies it to the message.  If the handler is not
+found (undefined), then it sends back a
+=missingHandlerExceptionMessage= to the sender of the
+message.
+
+#+BEGIN_SRC js :tangle extensible-actor.js
+    var react = function(message) {
+        var name = message.name;
+		var sender = message.sender;
+        var handler = handlers[name];
+		if (handler === undefined) {
+			send(message.sender, messageNotUnderstoodExceptionMessage(a,name));
+		}
+		else {
+			handler(message);
+		}
+    };
+#+END_SRC
+
+* =addHandler=
+
+The =addHandler= function enables the dynamic extension of
+the message interface.  =addHandler= takes a message and a
+handler and simply adds (or overrides if the binding already
+exists) a handler against a message name.
+
+#+BEGIN_SRC js :tangle extensible-actor.js
+    var addHandler = function(messageName, handler) {
+		handlers[messageName] = handler;
+	}
+#+END_SRC
+
+* Exceptions
+
+#+BEGIN_SRC js :tangle extensible-actor.js
+    var  messageNotUnderstoodExceptionMessage = function(a,msg_name) {
+		return {name: "Exception", 
+				sender: a, 
+				data: {exception: "messageNotUnderstood",
+					   msgName: msg_name}};
+	};
+
+    var addExceptionHandler = function(a) {
+		addHandler("Exception", 
+				   function(message) {
+					   console.log(a.id + ":" + 
+								   "received " + message.data.exception + " from "
+								   + message.sender.id + 
+								   " for message " + 
+								   message.data.msgName);});
+	};
+#+END_SRC
+
+* Building and returning the actor
+#+BEGIN_SRC js :tangle extensible-actor.js
+	var a = {};
+    a.id = id; 
+	a.react = react;
+    a.addHandler = addHandler;
+    addExceptionHandler(a);
+    return a;
+}
+
+#+END_SRC
+
+* Example
+** Actor =A=
+#+BEGIN_SRC js :tangle extensible-actor-example.js
+
+var A = Actor("A");
+A.addHandler("answer", 
+			 function(msg) {
+				 sender = msg.sender;
+				 console.log(A.id + ":" + 
+							 "received message " + msg.name + 
+							 " from " + sender.id);
+				 data = msg.data;
+				 n = data.num;
+				 console.log(A.id + ":" + "updated n = "  + n);
+			 });
+A.run = function(n) {
+	console.log(A.id + ": entered run");
+	send(B, {name: "incr", sender: A, data: {num: n}});
+	console.log(A.id + ": sent message incr to " + B.id);
+};
+
+#+END_SRC
+
+** Actor =B=
+#+BEGIN_SRC js :tangle extensible-actor-example.js
+
+var B = Actor("B");
+B.addHandler("incr", 
+			 function(msg) {
+				 sender = msg.sender;
+				 console.log(B.id + ":" + 
+							 "received message " + msg.name + 
+							 " from " + sender.id);
+				 data = msg.data;
+				 n = data.num;
+				 console.log(B.id + ":" + "argument n = "  + n);
+				 send(sender, {name: "answer", sender: B, data: {num: n+1}});
+			 });
+#+END_SRC
+
+** Boilerplate HTML to run the alternative example
+
+The boilerplate HTML file =altor.html= loads the actor
+library and the example.
+
+#+BEGIN_SRC html :tangle extensible-actor-example.html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Simple Actor Example</title>
+  <script type="text/javascript" src="send.js"></script>
+  <script type="text/javascript" src="extensible-actor.js"></script>
+  <script type="text/javascript" src="extensible-actor-example.js"></script>
+</head>
+<body>
+  <h1> Simple example showing message passing between Actors</h1>
+
+  <p> To run the Example on a Chrome Browser, Ctrl-Shift-J
+  to the JS console and invoke, for example,
+  A.run(5)</code>.
+  </p>
+#+END_SRC
+
+
+

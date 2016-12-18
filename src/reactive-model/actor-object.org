@@ -1,31 +1,31 @@
 #+title:  An implementation of Actors in Javascript
-
+#+setupfile:  ../org-templates/level-1.org
 * Introduction
 
 This note builds an implementation of actors based on the
 blog [[http://www.dalnefre.com/wp/2014/03/actors-in-javascript/][It's Actors all the way down]], but with one important
 difference (see below).
 
-* Actors
+* Actors and objects 
 
-** An Actor is an object with a =handler=
+** An Actor is an object that reacts to messages
 
 An actor is an object.  Each actor carries with it a name,
-other local state, and a =handler=, which is a function of
-one argument, a message.  A handler takes a message and does
-something: typically, it modifies its local state or sends a
-message to other actors.
+other local state, and a method =react=, which is a function
+of one argument, a message.  A handler takes a message and
+does something: typically, it modifies its local state
+variables or sends a message to other actors.
 
 ** An actor sends messages to another actor
 
 An actor =A= can /send/ a message =m= to an actor =B=.  A
-send is different from a function call.  A send never
-returns.  Hence there is no need for =A= to wait for =B= to
-'finish' processing the message it sent to =B=.  A /send/ is
-thus /asynchronous/.  Contrast this with a function call,
-where =A= waits until =B= completes the processing of the
-message =m=.  A function or method call, is thus
-/synchronous/.
+send is different from a function call.  Unlike a function
+call, a send never returns.  Hence there is no need for =A=
+to wait for =B= to 'finish' processing the message it sent
+to =B=.  A /send/ is thus /asynchronous/.  Contrast this
+with a function call, where =A= waits until =B= completes
+the processing of the message =m=.  A function or method
+call, is thus /synchronous/.
 
 ** SMS vs. Phone calls
 
@@ -35,7 +35,6 @@ WhatsApp) message versus a phone call.  SMS is asynchronous
 (you simply send the message and move on to other things). 
 A phone call is synchronous (you're waiting for the other
 party to pick up the call).
-
 
 * Why Actors?
 
@@ -86,8 +85,6 @@ their time.  The increasingly distributed and reactive
 nature of computing today has resulted in a resurgence of
 interest in Actors.
 
-
-
 * Javascript's execution model
 
 A good description of Javascript's execution model (called
@@ -98,6 +95,8 @@ the Event Loop) may be found in the following articles:
  - Carbon Five's  [[http://blog.carbonfive.com/2013/10/27/the-javascript-event-loop-explained/][Javascript Event Loop Model Explained]]
 
  - Mozilla's pages on [[https://developer.mozilla.org/en/docs/Web/JavaScript/EventLoop][Javascript Event Loop]]
+
+ - Dan Martensen's Apr 2015 article on [[https://danmartensen.svbtle.com/events-concurrency-and-javascript][Events, Concurrency and JavaScript]]
 
 In brief, Javascript's execution model consists of a queue
 of /thunks/.  A thunk is a function of no arguments.  The
@@ -112,13 +111,13 @@ specifies the number of milliseconds /after/ which the
 argument is added to the queue.  The default (=ms= = 0) adds
 the thunk to the queue immediately.
 
-* A Javascript Implementation of Actors
+* A Javascript Implementation of asynchronous send
 
 The first building block is the function =invokeLater= that
 uses =setTimeout= to simply put a thunk on the Javascript
 execution queue.
 
-#+BEGIN_SRC js :tangle actor.js
+#+BEGIN_SRC js :tangle send.js
 var invokeLater = function (thunk) {setTimeout(thunk, 0);}
 #+END_SRC
 
@@ -133,65 +132,79 @@ The central piece in building actors is the =send=
 primitive.  =send(a, msg)= sends the message =msg=
 to actor =a=.  
 
-#+BEGIN_SRC js :tangle actor.js
+#+BEGIN_SRC js :tangle send.js
 var send = function(recipient, message) {
     invokeLater(function () {
-        recipient.handler(message);
+        recipient.react(message);
     });
 };
 #+END_SRC
 
 =send(recipient, message)= queues a thunk, /which when
-invoked/ will call the =recepient='s =handler= method 
+invoked/ will call the =recepient='s =react= method 
 with =message= as an argument.
 
-
 * Example
-
+** Actor =B= increments a number sent by actor =A=
 Consider two actors =A= and =B=.  The interaction between
 =A= and =B= is simple: =A= sends a message to =B= whose
 payload includes a number, say =n=.  =B= sends =n+1= back to
 =A=.
 
 Each actor is implemented as an object containing the fields
-=name= (for print identity) and =handler=, a function that
+=name= (for print identity) and =react=, a function that
 takes a message and handles it.
 
 ** The actor =A= 
 
-The =run=
+First we declare an object =A=  whose name on "A". 
 #+BEGIN_SRC js :tangle example.js
 var A = { 
    name : "A",
-   handler : function(message) {
-            	console.log("A: got result  " + message.answer + 
-							" from "+ message.sender.name);
-   },
+#+END_SRC
+
+
+The =run= method is a function that takes a number =n= and
+sends it to the actor =B=, suitably logging messages to the
+console.  Note that the actor =A= is part of the message to
+=B=.
+
+#+BEGIN_SRC js :tangle example.js
    run : function(n) {
-	   console.log("A: run");
+	   console.log("A: entered run");
 	   send(B, {arg: n, sender: A});
 	   console.log("A: sent msg to B");
+   },
+#+END_SRC
+
+The =react= method simply logs the answer:
+#+BEGIN_SRC js :tangle example.js
+   react : function(message) {
+            	console.log("A: got result  " + message.answer + 
+							" from "+ message.sender.name);
    }
 }
 #+END_SRC
 
+** The actor =B=
+The actor =B= receives a message from =A=, extracts the
+argument (a number) and sends back a message to =A=
+containing the incremented value.
+
 #+BEGIN_SRC js :tangle example.js
 var B = {
      name : "B",
-     handler : function(message) {
+     react : function(message) {
 		 console.log("B: received message from A");
 		 send(message.sender, {answer: message.arg + 1, sender : B});
 		 console.log("B: sent msg to A");
 	 }
 }
-
 #+END_SRC
 
-
-* Boilerplate HTML to run the example
-
+** Boilerplate HTML to run the example
 The boilerplate HTML file =example.html= loads the actor
-library and the example.
+library =send.js= and the example =example.js=.
 
 #+BEGIN_SRC html :tangle example.html
 <!DOCTYPE html>
@@ -199,7 +212,7 @@ library and the example.
 <head>
   <meta charset="utf-8">
   <title>Simple Actor Example</title>
-  <script type="text/javascript" src="actor.js"></script>
+  <script type="text/javascript" src="send.js"></script>
   <script type="text/javascript" src="example.js"></script>
 </head>
 <body>
@@ -210,4 +223,5 @@ library and the example.
   A.run(5)</code>.
   </p>
 #+END_SRC
+
 

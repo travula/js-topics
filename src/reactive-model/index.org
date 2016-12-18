@@ -1,0 +1,26 @@
+#+title:  Reactive Programming and the Actor Model of Asynchronous Computing
+#+setupfile:  ../org-templates/level-1.org
+
+* Objective 
+
+We discuss the basics of the /reactive/ model of computing
+as used in building web applications.  Actors are entities
+that hold local state and communicate with each other by
+sending messages.  An actor /reacts/ to the message it
+receives by either modifying its local state or sending
+messages to other actors, or both.
+
+
+In what follows, we present three models of implementation
+of actors in Javascript: 
+
+
+-  [[./actor-object.org][An Actor implementation in Javascript]]  :: Each actor is
+     an object with a method =react=.
+
+-  [[./actor-handler.org][Evolving Reactivity Incrementally]] :: The reaction
+     interface of an actor is controlled incrementally by
+     binding handlers to messages (aka events).
+
+- [[./actor-closure.org][Actors as Closures]]  :: Actors have with encapsulated state
+     but with a fixed reaction interface.

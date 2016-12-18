@@ -1,0 +1,220 @@
+#+title:  Actors as closures
+#+setupfile:  ../org-templates/level-1.org
+
+* Introduction
+
+One problem with the previous two implementations is safety.
+Note a message to a recipient also contains the entire
+sender actor (in the =sender= field).  Since actors
+themselves are objects, this gives the recipient an
+opportunity to mutate the sender actor.  For example, anyone
+can change an actor's =id= field.  Such arbitrary tampering
+of fields can lead to serious loss of safety in programs and
+the devices that they control.
+
+* Closures
+
+A closure is a function with its own private state.  A
+closure could be used to model safe actors.  The safety of
+the actor means that access to any internal state of the
+actor may happen only via the published message interface of
+the actor.
+
+An actor is simply a closure.  An actor reacts to a message
+by applying itself to the message.  There is no methods.
+
+** Send
+#+BEGIN_SRC js :tangle send-as-apply.js
+var invokeLater = function (thunk) {setTimeout(thunk, 0);}
+var send = function(recipient, message) {
+    invokeLater(function () {
+        recipient(message);
+    });
+};
+#+END_SRC
+
+** COMMENT Actor Manager 
+In order to avoid this, we create a global actor manager to
+which all actors register themselves.  The manager returns
+the id of the actor upon successful registration.  Now, all
+sends refer to the id rather than the actor itself.
+
+An actor manager is a closure.  It holds the private
+variables: =registry=, which is an object mapping id's to
+actors, =registry_inv=, whic is an object mapping actors to
+their id's, and =i= (starting at 0) which counts the number
+of actors registered.
+
+An actor manager is also like an actor.  The function
+=react= takes two types of messages: =register= and =send=.
+=register= registers an actor with the manager.  =send=
+takes an id and a message. It then sends the message to the
+actor obtained by looking up the id in the registry.
+
+#+BEGIN_SRC js :tangle no
+var ActorManager = function() {
+	var registry = {};
+	var registry_inv = {};
+
+	var i = 0;
+
+	var register = function(actor) {
+		registry[i] = actor;
+		registry_inv[actor] = i;
+		i = i+1;
+	};
+
+	var getActorForId = function(id) {
+		var a = registry[id];  
+		// todo: check if a is undefined
+		return a;
+	};
+
+
+	var getIdForActor = function(a) {
+		var id = registry_inv[a];  
+		// todo: check if i is undefined
+		return id;
+	};
+
+	var react = function(msg) {
+		if (msg.name === "register") {
+			register(msg.actor);
+			}
+		else if (msg.name === "getActorForId") {
+			return getActorForId(msg.id);
+		}
+		else if (msg.name === "getIdForActor") {
+			return getIdForActor(msg.actor);
+		}
+		else {
+			throw "Error: ActorManager: invalid message";
+		}
+	};
+	return react;
+}();
+
+
+var  getIdForActor = function(a) {
+	return ActorManager({name: "getIdForActor", actor: a});
+};
+
+
+var  getActorForId =  function(id) {
+	return ActorManager({name: "getActorForId", id: id});
+};
+
+var  register =  function(a) {
+	 ActorManager({name: "register", actor: a});
+};
+
+#+END_SRC
+
+** Actors are closures
+*** =A=
+#+BEGIN_SRC js :tangle actor-as-closure-example.js
+var A = function() {
+	var id = "A";
+	
+	var self = function(msg) {
+		var name = msg.name;
+		var sender = msg.sender;
+		var sender_id = msg.sender_id;
+		var	data = msg.data;
+
+		if (name === "id") {
+			return id;  // synchronous
+
+		}
+
+		// A({name: "answer", sender: B, sender_id: "B", data: {num: n}});
+		else if (name === "answer") {
+			console.log(id + ":" + "received message name " + msg.name + 
+						" from " + sender_id);
+			n = data.num;
+			console.log(id + ":" + "updated n ="  + n);
+		}
+		// A({name: "run", data: {num: n}});
+		else if (name === "run") {
+			var n = data.num;
+			var bid = B({name: "id"}); // this is not a send
+			                           // but could be made
+									   // one.
+
+			console.log(id+ ": entered run");
+			send(B, {name: "incr", 
+					 sender: self, sender_id: id, 
+					 data: {num: n}});
+
+			console.log(id + ": sent number " + n + " to " + bid);
+		}
+		else {
+			send(sender, {name: "exception", 
+						  sender: self, sender_id: id,
+						  data: {type: "msg not understood", name: name}});
+		};
+	};
+	return self;
+}();
+
+#+END_SRC
+
+*** =B=
+
+#+BEGIN_SRC js :tangle actor-as-closure-example.js
+var B = function() {
+    var id = "B";
+	var self = function(msg) {
+		var name = msg.name;
+		var sender = msg.sender;
+		var sender_id = msg.sender_id;
+		var	data = msg.data;
+
+		// synchronous
+		if (name === "id") {
+			return id;
+		}
+
+		// {name: "incr", sender: a, data: {num: n}}
+		if (name === "incr") {
+			console.log(id + ":" + 
+						"received message name " + msg.name + 
+						" from " + sender_id);
+			n = data.num;
+			send(sender, {name: "answer", 
+						  sender: self, sender_id: id, 
+						  data: {num: n+1}});
+
+			
+		}
+		else {
+			send(sender, {name: "exception", 
+						  sender: self, sender_id: id,
+						  data: {type: "msg not understood", name: name}});
+		};
+	};
+	return self;
+}();
+
+#+END_SRC
+
+
+
+*** Boilerplate HTML
+#+BEGIN_SRC html :tangle actor-as-closure-example.html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Simple Actor Example</title>
+  <script type="text/javascript" src="send-as-apply.js"></script>
+  <script type="text/javascript" src="actor-as-closure-example.js"></script>
+</head>
+<body>
+  <h1> Simple example showing message passing between Actors</h1>
+
+  <p> To run the Example on a Chrome Browser, Ctrl-Shift-J
+  to the JS console and invoke, for example,
+  A({name: "run", data: {num: 4}})</code>.
+  </p>
+#+END_SRC
