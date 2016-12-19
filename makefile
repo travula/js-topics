@@ -4,6 +4,7 @@ BUILD_DIR=build
 VER_BRANCH=build-release
 VER_FILE=VERSION
 
+ORG_MODE_DIR=~/emacs/lisp
 LITERATE_TOOLS="https://github.com/vlead/literate-tools.git"
 LITERATE_DIR=literate-tools
 ELISP_DIR=elisp
@@ -15,7 +16,7 @@ SRC_DIR=src
 PWD=$(shell pwd)
 STATUS=0
 
-all:  build
+all:  check-elisp build
 
 clean-literate:
 	rm -rf ${ELISP_DIR}
@@ -24,7 +25,7 @@ clean-literate:
 
 pull-literate-tools:
 	@echo "pulling literate support code"
-	echo ${PWD}
+	echo ${PWD}n
 ifeq ($(wildcard elisp),)
 	@echo "proxy is..."
 	echo $$http_proxy
@@ -35,6 +36,18 @@ ifeq ($(wildcard elisp),)
 	rm -rf ${LITERATE_DIR}
 else
 	@echo "Literate support code already present"
+endif
+
+check-elisp:
+ifneq ($(wildcard ${ORG_MODE_DIR}/org-8.2.10/*),)
+	@echo "Found elip build."
+else
+	mkdir -p ${ORG_MODE_DIR}
+	wget http://orgmode.org/org-9.0.2.tar.gz
+	tar zxvf org-9.0.2.tar.gz
+	rm -rf org-9.0.2.tar.gz
+	mv org-9.0.2 ${ORG_MODE_DIR}
+	ln -s ${ORG_MODE_DIR}/org-9.0.2/ ${ORG_MODE_DIR}/org-8.2.10
 endif
 
 init: pull-literate-tools
