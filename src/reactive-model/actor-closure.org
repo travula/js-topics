@@ -21,7 +21,10 @@ actor may happen only via the published message interface of
 the actor.
 
 An actor is simply a closure.  An actor reacts to a message
-by applying itself to the message.  There is no methods.
+by applying itself to the message.   All message handlers
+are defined to have collective but private access to the
+actor's private state.  
+
 
 ** Send
 #+BEGIN_SRC js :tangle send-as-apply.js
@@ -41,7 +44,7 @@ sends refer to the id rather than the actor itself.
 
 An actor manager is a closure.  It holds the private
 variables: =registry=, which is an object mapping id's to
-actors, =registry_inv=, whic is an object mapping actors to
+actors, =registry_inv=, which is an object mapping actors to
 their id's, and =i= (starting at 0) which counts the number
 of actors registered.
 
@@ -111,6 +114,7 @@ var  register =  function(a) {
 #+END_SRC
 
 ** Actors are closures
+
 *** =A=
 #+BEGIN_SRC js :tangle actor-as-closure-example.js
 var A = function() {

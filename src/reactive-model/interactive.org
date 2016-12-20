@@ -1,0 +1,115 @@
+#+title: Interactive HTML applications
+#+setupfile:  ../org-templates/level-1.org
+
+* Introduction
+
+We are now ready to work with the browser as an interactive
+medium.
+
+
+** DOM
+
+The DOM is the internal representation of an HTML document.
+Elements of the DOM are represented as Javascript data
+structures.  Nodes in the DOM tree hold state information.
+Furthermore, they respond to /events/.  An event could be a
+mouse click from a user, or the pressing of a submit button,
+or any change in state related information (/custom
+events/).
+
+** Handlers and Event Listeners
+
+HTML allows events to be bound to handlers, that are
+Javascript functions of one argument (the event).  These
+handlers may effect a change in another part of the DOM,
+send messages across to a server, or modify the state of
+some internal object.
+
+
+* Application: Mock up
+
+We now consider making the increment application
+interactive.  We may envision a screen with two boxes and a
+submit button.  We type in a number in the first box.  We
+then press the submit button.  The second box then displays
+the incremented value.   
+
+** Mock ups
+Here are a couple of screen mock ups that help visualize the
+application:
+
+* Application: View
+
+** HTML
+
+#+BEGIN_SRC html :tangle skel.html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Increment Example</title>
+</head>
+<body>
+  <h1> Increment a number interactively: Skeleton</h1>
+  <div id="app">
+      <div>
+      <p> Input a number: </p>
+      <input id="inp-box" type="text"></input>
+      <button type="button" id="submit">Submit</button>       
+      <div> 
+      <p> Answer: </p>
+      <input id="ans-box" type="text" readonly></input>
+      </div>
+  </div>
+</body>
+</html>
+#+END_SRC
+
+** HTML view
+
+#+BEGIN_HTML
+  <div id="app">
+      <div>
+      <p> Input a number: </p>
+      <input id="inp-box" type="text"></input>
+      <button type="button" id="submit">Submit</button>       
+      <div> 
+      <p> Answer: </p>
+      <input id="ans-box" type="text" readonly></input>
+      </div>
+  </div>
+#+END_HTML
+
+
+
+* Application: An interactive view
+
+Now it's time to make the view interactive.  Clicking the
+submit button should update the value in the Answer box.
+
+#+BEGIN_SRC html :tangle interactive-view.html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Increment Example: Interactive View</title>
+</head>
+<body>
+  <h1> Increment a number:  Interactive view </h1>
+  <div id="app">
+      <div>
+      <p> Input a number: </p>
+      <input id="inp-box" type="text"></input>
+      <button type="button" id="submit">Submit</button>
+      <div> 
+      <p> Answer: </p>
+      <input id="ans-box" type="text" readonly></input>
+      </div>
+  </div>
+</body>
+</html>
+
+
+#+END_SRC
+
+
