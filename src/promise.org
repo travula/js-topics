@@ -1,0 +1,272 @@
+#+TITLE: Tinkering with promises
+#+AUTHOR: Thirumal Ravula
+#+DATE: [2017-11-30 Thu]
+#+SETUPFILE: ./org-templates/level-0.org
+#+TAGS: boilerplate(b)
+#+EXCLUDE_TAGS: boilerplate
+#+OPTIONS: ^:nil
+
+
+* Introduction
+  Playing with promises to understand what promises are and
+  how to use them. 
+
+* The case for promises
+  Event handling using callback is a way for asynchronous
+  way of doing things.  This is to get around the problem of
+  single threaded model of js.  Using event handling, the
+  events themselves might not be captured or missed out to
+  call the appropriate callback.  Promises provide a nicer
+  mechanism to handle the events.
+
+* First, some event handling with callbacks
+  Let us work and demonstrate with event handling using
+  callbacks and understand with an implementation.
+
+** Event handling on a AJAX call
+   In the example, we make an ajax call to get the IP of the
+   browser, and see how event handlers are attached for
+   different that happen when an ajax call is made. 
+#+NAME: callback-js
+#+BEGIN_SRC js
+var getIP = function() {
+  var oReq = new XMLHttpRequest();
+  //oReq.addEventListener("progress", updateProgess);
+  oReq.addEventListener("load", requestComplete);
+  oReq.addEventListener("error", requestFailed);
+
+  oReq.open("GET", "https://api.ipify.org/");
+  oReq.send();
+};
+
+var requestComplete = function() {
+  elem = document.getElementById("display-label");
+  elem.innerText = this.responseText;
+  console.log("success");
+};
+
+var requestFailed = function() {
+  console.log("failed");
+  elem = document.getElementById("display-label");
+  elem.innerText = this.status;
+};
+
+#+END_SRC
+
+** HTML
+   The html contains a anchor attached with a click event.
+   On click, an ajax request is made to get the IP of the
+   browser and is displayed on success.  
+#+name: callback-html
+#+BEGIN_SRC html
+<html>
+  <head>
+    <script src="callback.js"></script>
+  </head>
+  <body>
+    <div>
+      <a onclick="getIP()"> Click Me to get IP </a>
+      <label id="display-label"></label>
+  </body>
+</html>
+
+#+END_SRC
+
+* Promises
+  This is same implementation as this [[https://developers.google.com/web/fundamentals/primers/promises][example]] for my
+  understanding.
+** HTML
+#+name: promise-html
+#+BEGIN_SRC html
+<html>
+  <head>
+    <script src="promise.js"></script>
+  </head>
+  <body>
+    <div id="get-json-id">
+      <ul>
+      <li><a onclick="getJsonFirst(this)">Get Json First</a></li>
+      <li><a onclick="getJsonSecond()">Get Json Second</a></li>
+      <li><a onclick="getJsonThird()">Get Json Third</a></li>
+      <li><a onclick="multipleAsync()">Multiple Async</a></li>
+      <li><a onclick="getChapter1And2()">get Chapter 1 & 2</a></li>
+      </ul>
+    </div>
+  </body>
+
+</html>
+
+#+END_SRC
+
+** JS
+
+*** How to get a URL
+    To make an ajax call, a promise is created.  A promise
+    comes with two callbacks - resolve and reject - which
+    are used to handle success and failure of the AJAX call
+    respectively.  Within this promise, the following things
+    are done:
+    1. Make a XMLHttpRequest
+    2. Attach resolve when the above request is a success.
+    3. Attach reject when the above request is a failure.
+    4. dispatch the request.
+    
+#+name: how-to-get-url
+#+BEGIN_SRC js
+var get = function get(url) {
+  return new Promise(function(resolve, reject) {
+    var req = new XMLHttpRequest(url);
+    req.open('GET', url);
+    req.onload = function() {
+      if (req.status == 200) {
+        resolve(req.response);
+      } else {
+        reject(Error(req.statusText));
+      }
+    };
+
+    req.onerror = function() {
+      reject(Error("network error"));
+    };
+    req.send();
+  });
+};
+
+#+END_SRC
+
+*** Config
+#+name: config
+#+BEGIN_SRC js
+var urlPath = "./web-fundamentals/fundamentals/primers/";
+var jsonResource = "story.json"
+#+END_SRC
+*** Get Json : First Cut
+    Make
+#+name: get-json-first
+#+BEGIN_SRC js
+var getJsonFirst = function() {
+  var url = urlPath + jsonResource;
+  get(url).then(function(response) {
+    console.log("Success!", response);
+  }, function(error) {
+    console.error("Failed!", error);
+  });
+};
+
+#+END_SRC
+
+*** Get Json : Second Cut
+    Here the json is parsed on the output of the AJAX call.
+#+name: get-json-second
+#+BEGIN_SRC js
+var getJsonSecond = function() {
+  var url = urlPath + jsonResource;
+  get(url).then(function(response) {
+    return JSON.parse(response);
+  }).then(function(response) {
+    console.log("Yey JSON!", response);
+  });
+};
+
+#+END_SRC
+
+*** Get Json : Third Cut
+    It is the same as second cut, except that since
+    =JSON.parse= takes a single parameter which will be the
+    response, it is passed as argument to the first =then=.
+#+name: get-json-third
+#+BEGIN_SRC js
+var getJsonThird = function() {
+  var url = urlPath + jsonResource;
+  get(url).then(JSON.parse).then(function(response) {
+    console.log("Yey JSON!", response);
+  });
+};
+
+#+END_SRC
+
+*** Get Json : That takes an argument
+    This returns promise that makes an ajax call.
+#+name: get-json
+#+BEGIN_SRC js
+var getJSON = function(res) {
+  var url = urlPath + res;
+  return get(url).then(JSON.parse)
+};
+
+#+END_SRC
+
+*** Queuing Asynchronous calls
+    The =getJSON= encapsulates a promise that does one
+    single async call.  But we chain multiple async calls.
+
+#+name: async-chain
+#+BEGIN_SRC js
+var multipleAsync = function() {
+  getJSON("story.json").then(function(story) {
+    return getJSON(story.chapterUrls[0]);
+  }).then(function(chapter1) {
+    console.log("got chapter 1!", chapter1);
+  });
+};
+
+#+END_SRC
+
+*** Get Chapters
+    A chapter is obtained by chaining promises that make the
+    ajax calls. 
+#+name: get-chapter
+#+BEGIN_SRC js
+var storyPromise;
+var getChapter = function(i) {
+  storyPromise = storyPromise || getJSON("story.json");
+
+  return storyPromise.then(function(story) {
+    return getJSON(story.chapterUrls[i]);
+  });
+};
+
+
+var getChapter1And2 = function() {
+  getChapter(0).then(function(chapter1) {
+    console.log("chapter 1: ", chapter1);
+    return getChapter(1);
+  }).then(function(chapter2) {
+    console.log("chapter 2: ", chapter2);
+
+  });
+};
+
+#+END_SRC
+    
+
+* Tangle                                                        :boilerplate:
+** HTML
+*** Promise
+#+BEGIN_SRC html :tangle promise.html :eval no :noweb yes
+<<promise-html>>
+#+END_SRC
+*** Call Back
+#+BEGIN_SRC html :tangle callback.html :eval no :noweb yes
+<<callback-html>>
+#+END_SRC
+
+** JS
+*** Promise
+#+BEGIN_SRC js :tangle promise.js :eval no :noweb yes
+<<config>>
+<<how-to-get-url>>
+<<get-json-first>>
+<<get-json-second>>
+<<get-json-third>>
+<<get-json>>
+<<async-chain>>
+<<get-chapter>>
+#+END_SRC
+
+*** callback
+#+BEGIN_SRC js :tangle callback.js :eval no :noweb yes
+<<callback-js>>
+#+END_SRC
+
+

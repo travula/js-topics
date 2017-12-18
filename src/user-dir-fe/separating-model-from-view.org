@@ -1,0 +1,787 @@
+# ;; -*- mode: org; fill-column: 32; -*-
+#+TITLE: Separating Model from View
+#+DATE: [2017-02-19 Sun]
+#+SETUPFILE: ../../org-templates/level-2.org
+#+TAGS: boilerplate(b)
+#+EXCLUDE_TAGS: boilerplate
+#+OPTIONS: ^:nil
+
+* Objective
+  In this lecture, we see how to
+  refactor our implementation so
+  as to separate the view from
+  the model.
+
+* Routes (DFA locations)
+  The front end application is
+  conceived as a set of states
+  in a DFA.  Each route is a
+  state and the transition of
+  the states in the DFA is
+  determined by the differentent
+  triggers.
+
+#+BEGIN_EXAMPLE
+ 1.  #get_all_users
+ 2.  #edit_user
+ 3.  #add_user
+ 4.  #delete_user
+#+END_EXAMPLE
+
+** Transition Graph
+
+Include Picture here.
+
+* Templates
+** get_all_users
+#+BEGIN_EXAMPLE
+1. edit  (button for each row)
+2. delete (button for each row)
+3. add user (button)
+4. Name and email of the user
+#+END_EXAMPLE
+*** A notation for specifying elements
+#+BEGIN_EXAMPLE
+(<app-header>
+ <add-user-button>
+ (<user-name> <user-email> <edit-button> <del-button>) 
+ ...)
+#+END_EXAMPLE
+*** HTML for get_all_users
+    The rows are hard coded with the values, to show the routing
+#+NAME: get_all_users_html
+#+BEGIN_SRC html 
+<div id="add-user-btn" class="hidden">
+  <p> List of Users </p>
+  <ul id="add-user">
+    <li>
+      <button id="add">Add</button>
+    </li>
+  </ul>
+</div>
+      
+<div id="get-all-users-container" class="hidden">
+  <ul id="users-list">
+  </ul>
+</div>
+
+#+END_SRC
+** delete_user
+#+BEGIN_EXAMPLE
+1. name  (read only)
+2. email (read only)
+3. delete  (button)
+4. cancel (button)
+#+END_EXAMPLE
+
+*** Notation
+
+#+BEGIN_EXAMPLE
+(<app-header>
+ <name-label> <name-readonly>
+ <email-label> <email-readonly>
+ <delete-button> <cancel-button>)
+#+END_EXAMPLE
+*** HTML for delete user
+
+#+NAME: delete_user_html
+#+BEGIN_SRC html 
+<div id="delete-user-container" class="hidden">
+  <p> Delete User </p>
+  <ul id="delete-user">
+    <li>
+      <label> Name:</label>
+      <input id="delete-name-box" type="text"></input>
+    </li>
+
+    <li>
+      <label> Email:</label>
+      <input id="delete-email-box" type="text"></input>
+    </li>
+
+    <li>
+      <button id="delete">Delete</button>
+      <button id="cancel">Cancel</button>
+    </li>
+
+  </ul>
+</div>
+
+#+END_SRC
+** edit_user
+Controls (transition edges)
+#+BEGIN_EXAMPLE
+1. name  (text input)
+2. email (text input)
+3. done  (button)
+4. cancel (button)
+#+END_EXAMPLE
+
+*** Notation
+#+BEGIN_EXAMPLE
+<edit-template> :: = 
+(<app-header>
+ <name-label> <name-input>
+ <email-label> <email-input>
+ <done-button> <cancel-button>)
+
+#+END_EXAMPLE
+
+*** HTML for edit user
+
+#+NAME: edit_user_html
+#+BEGIN_SRC html 
+<div id="edit-user-container" class="hidden">
+  <p> Edit User </p>
+  <ul id="edit-user">
+    <li>
+      <label> Name:</label>
+      <input id="name-box" type="text"></input>
+    </li>
+
+    <li>
+      <label> Email:</label>
+      <input id="email-box" type="text"></input>
+    </li>
+
+    <li>
+      <button id="done">Done</button>
+      <button id="cancel">Cancel</button>
+    </li>
+    
+  </ul>
+</div>
+
+#+END_SRC
+** add_user
+Controls (transition edges)
+#+BEGIN_EXAMPLE
+1. name  (text input)
+2. email (text input)
+3. add  (button)
+4. cancel (button)
+#+END_EXAMPLE
+*** Notation
+#+BEGIN_EXAMPLE
+<edit-template>
+#+END_EXAMPLE
+
+*** HTML for Add User
+
+#+NAME: add_user_html
+#+BEGIN_SRC html 
+<div id="add-user-container" class="hidden">
+  <p> Add User </p>
+  <ul id="add-user">
+    <li>
+      <label> Name:</label>
+      <input id="name-box" type="text"></input>
+    </li>
+
+    <li>
+      <label> Email:</label>
+      <input id="email-box" type="text"></input>
+    </li>
+
+    <li>
+      <button id="add">Add</button>
+      <button id="cancel">Cancel</button>
+    </li>
+    
+  </ul>
+</div>
+
+#+END_SRC
+** All together
+#+BEGIN_SRC html :tangle index.html :eval no :noweb yes
+<html>
+  <head>
+  <link rel="stylesheet" type="text/css" href="common.css" />
+  <script type="text/javascript" src="jquery-3.1.1.min.js"></script>
+  <script type="text/javascript" src="main.js"></script>
+  </head>
+  <body>
+    <<get_all_users_html>>
+    <<add_user_html>>
+    <<delete_user_html>>
+    <<edit_user_html>>
+  </body>
+</html>
+
+#+END_SRC
+
+** Style
+#+NAME: common_styles
+#+BEGIN_SRC css :tangle common.css
+
+#add-user-btn {
+    margin-top: 2em;
+    margin-left: 32em;
+}
+
+#get-all-users-container {
+    margin-left: 4em;
+    margin-top: 2.5em;
+}
+
+#add-user-container {
+    margin-left: 4em;
+    margin-top: 2.5em;
+}
+
+#delete-user-container {
+    margin-left: 4em;
+    margin-top: 2.5em;
+}
+
+#edit-user-container {
+    margin-left: 4em;
+    margin-top: 2.5em;
+}
+
+li {
+    list-style-type: none;
+    margin-bottom: 3em;
+}
+
+ul {
+    list-style-type: none;
+}
+
+button { 
+    width: 4em;
+    margin: 1.5em;
+}
+
+.hidden {
+    display: none;
+}
+
+p {
+    font-size:300%;
+    /* margin-left: 0em; */
+    /* margin-top: 2.5em; */
+
+}
+
+#delete-name-box {
+    border-width: 0px;
+}
+
+#delete-email-box {
+    border-width: 0px;
+}
+
+#+END_SRC
+
+* Behaviour
+** Hash Route registration handlers and helpers
+#+BEGIN_EXAMPLE
+   The event =hashchange= fires
+   when a window's =hash=
+   changes.  =hash= can be part
+   of the =window.location= and
+   =location.hash= gives the
+   =hash= part of the location. 
+   if a window's url is:
+   =https://localhost/#index=,
+   =window.location.hash=
+   returns =#index=. 
+
+   With this paraphernalia at
+   our disposal, a listener
+   (handler) is registered on
+   the the =hashchange= event.
+
+   The listener that is
+   triggered on every
+   =hashchange= 
+   1) looks up a dictionary
+      containing key, value
+      pairs where each key is a
+      hash while the key's
+      corresponding value is a
+      function(handler).
+   2) Picks the handler
+      corresponding to the key
+      =hash= and runs it. 
+#+END_EXAMPLE
+#+NAME: hash_routes_registration_handlers_helpers
+#+BEGIN_SRC  js
+
+function hide_all_containers() {
+  // TODO: consider refactoring to addClass in a loop
+  console.log("hide containers");
+  $('#get-all-users-container').addClass("hidden");
+  $('#add-user-container').addClass("hidden");
+  $('#edit-user-container').addClass("hidden");
+  $('#delete-user-container').addClass("hidden");
+  $('#add-user-btn').addClass("hidden");
+};
+
+var create_hash_setter = function(hash) {
+  return function() {
+    window.location.hash = hash;
+  };
+};
+
+var setAddHash = create_hash_setter('add_user');
+
+var setEditHash = create_hash_setter('edit_user');
+
+var setDelHash = create_hash_setter('delete_user');
+
+var setIndexHash = create_hash_setter('index');
+
+function navigate(path) {
+  var current = window.location.href;
+  window.location.href = current.replace(/#(.*)$/, '') + '#' + path;
+};
+
+//strip # from window.location.hash
+function get_window_hash_path() {
+  return location.hash.substring(1);
+};
+
+function register_onhashchange_handlers(hash_to_handlers_mapper) {
+  $(window).on("hashchange", function(e) {
+    //strip hash out
+    hash_path = get_window_hash_path();
+    console.log("new hash: ", hash_path);
+    //we use hasOwnProperty since we need to check if a handler is 
+    // defined for the hash_path
+    //object has it, not its parents (in the prototype chain)
+    if (hash_to_handlers_mapper.hasOwnProperty(hash_path)) {
+      //invoke said handler function
+      hash_to_handlers_mapper[hash_path]();
+    } else {
+      console.warn(`no handler for ${hash_path}`);
+    }
+  });
+};
+
+#+END_SRC
+
+** Set On-Load Handlers
+#+BEGIN_EXAMPLE
+   After successful loading of
+   the initial page,
+   1. the listener for event
+      =hashchange= is registered and
+   2. model is created
+   are ensured.
+#+END_EXAMPLE
+#+NAME: on_load_handlers
+#+BEGIN_SRC js
+
+window.onload = function() {
+  register_onhashchange_handlers({
+    index: get_all_users_handler,
+    get_all_users: get_all_users_handler,
+    add_user: add_user_handler,
+    edit_user: edit_user_handler,
+    delete_user: delete_user_handler});
+
+  window.model = modelMaker();
+  console.log("on load on load onload")
+  let current_hash = get_window_hash_path();
+  if (current_hash === "") {
+    console.log("defaulting #url to get_all_users");
+    current_hash = "index";
+    console.log("navigating to: #" + current_hash);
+    navigate(current_hash);
+  }
+  
+  $(window).trigger("hashchange");
+  
+};
+
+#+END_SRC
+
+** Get Users
+#+BEGIN_EXAMPLE
+1. When the page loads,
+   i.e. index, users are
+   retreived from the model and
+   listed while hiding all other
+   pages.
+
+2. The listener for the =Add=
+   button on the event =click=
+   is set to allow adding a user
+
+3. The click event for =Edit=
+   button on each row is set to
+   listener(s) that do:
+
+   1. populate the =Edit User=
+      page with user details.
+
+   2. Set the listener for the
+      =click= event on the
+      =Done= button to update
+      the model and navigate 
+      back to the =index= page.
+
+   3. Set the listener for the
+      =click= event on the
+      =Cancel= button to
+      navigate back to the
+      =index= page.
+
+4. The click event for =Delete=
+   button on each row is set to
+   listener(s) that:
+
+   1. populate the =Delete User=
+      page with user details.
+
+   2. Set the listener for the
+      =click= event on the
+      =Delete= button to update
+      the model and navigate
+      back to =index= page.
+
+   3. Set the listener for the
+      =click= event on the
+      =Cancel= button to
+      navigate back to the
+      =index= page.
+#+END_EXAMPLE
+*** Set handlers for the buttons
+#+NAME: get_all_users_handler
+#+BEGIN_SRC js
+function populate_delete_user_page(email) {
+  console.log("populate_delete_user_page");
+  let user = window.model.findUserByEmail(email);
+  $('#delete-user-container #delete-name-box')[0].value = user.getName();
+  $('#delete-user-container #delete-name-box')[0].readOnly = true;
+  $('#delete-user-container #delete-email-box')[0].value = user.getEmail();
+  $('#delete-user-container #delete-email-box')[0].readOnly = true;
+
+  $('#delete-user-container #delete').off();
+  $('#delete-user-container #delete').click(function(e) {
+    deleteAndNavigate(email);
+  });
+
+  $('#delete-user-container #cancel').off();
+  $('#delete-user-container #cancel').click(setIndexHash);
+
+  setDelHash();
+};
+
+function populate_edit_user_page(email) {
+  console.log("populate_edit_user_page");
+
+  let user = window.model.findUserByEmail(email);
+  $('#edit-user-container #name-box')[0].value = user.getName();
+  $('#edit-user-container #email-box')[0].value = user.getEmail();
+
+  $('#edit-user-container #done').off()
+  $('#edit-user-container #done').click(function(e) {
+    updateAndNavigate(email);
+  });
+
+  $('#edit-user-container #cancel').off()
+  $('#edit-user-container #cancel').click(setIndexHash)
+  setEditHash();
+};
+
+function get_all_users_handler() {
+
+  var make_li_for_user = function(user) {
+
+    let del_btn = "<button id='delete' onclick=populate_delete_user_page(" +
+        "'" + user.getEmail() + "'" +
+        ")> Delete </button>";
+    let edit_btn = "<button id='edit' onclick=populate_edit_user_page(" +
+        "'" + user.getEmail() + "'" +
+        ")> Edit </button> ";
+    let li = $("<li>" + "Name: " +
+               user.getName() +
+               " | Email: " +
+               user.getEmail() +
+               edit_btn +
+               del_btn + 
+               "</li>"
+              );
+    return li;
+  };
+
+  console.log("get_all_users_handler");
+  hide_all_containers();
+  $('#get-all-users-container').removeClass("hidden");
+  $('#add-user-btn').removeClass("hidden");
+
+  $('#add-user-btn #add').off()
+  $('#add-user-btn #add').click(setAddHash);
+
+  let users = window.model.getUsers();
+  let ul = $('#get-all-users-container #users-list')
+  ul.empty(); //TODO: slower than removing nodes
+  
+  for (user of users) {
+    let li = make_li_for_user(user);
+    ul.append(li);
+  };
+
+};
+
+#+END_SRC
+
+** Add User
+#+BEGIN_EXAMPLE
+1. Show =Add User= page and hide
+   all others.
+2. Set listener(s) for the button
+   =Add= on the event =click=
+   that adds a user to the
+   model and navigates the
+   control back to index page.
+3. Set listener(s) for the
+   button =Cancel= on the event
+   =click= that navigates the
+   control back to index page.
+#+END_EXAMPLE
+
+*** Wire events to the the listeners. 
+    The =click= events for both
+    the buttons are set.
+    
+#+NAME: add_user_handler
+#+BEGIN_SRC js
+function add_user_handler() {
+  console.log("add user handler");
+  hide_all_containers();
+  $('#add-user-container #name-box')[0].value = "";
+  $('#add-user-container #email-box')[0].value = "";
+  $('#add-user-container').removeClass("hidden");
+  $('#add-user-container #add').off()
+  $('#add-user-container #add').click(addUserToModel);
+  $('#add-user-container #add').click(setIndexHash);
+  $('#add-user-container #cancel').off()
+  $('#add-user-container #cancel').click(setIndexHash);
+}
+
+#+END_SRC
+
+*** Define how a user is added 
+    Collect the =name= and
+    =email= values from the text
+    boxes and update the model. 
+
+#+NAME: add_user_to_model
+#+BEGIN_SRC js
+var addUserToModel = function() {
+  let name = $('#add-user-container #name-box')[0].value;
+  let email = $('#add-user-container #email-box')[0].value;
+  window.model.addUser(name, email);
+};
+
+#+END_SRC
+
+** Edit User
+#+BEGIN_EXAMPLE
+1. Show =Edit User= page and
+   hide all others.
+
+#+END_EXAMPLE
+#+NAME: edit_user_handler
+#+BEGIN_SRC js
+
+var updateAndNavigate = function(email) {
+  console.log("update and Navigate");
+  let new_name = $('#edit-user-container #name-box')[0].value;
+  let new_email = $('#edit-user-container #email-box')[0].value;
+  window.model.updateUser(email, new_name, new_email);
+  setIndexHash();
+};
+
+
+function edit_user_handler(email) {
+  console.log("edit user handler");
+
+  hide_all_containers();
+  $('#edit-user-container').removeClass("hidden");
+
+}
+
+#+END_SRC
+** Delete User
+#+BEGIN_EXAMPLE
+1. Show =Delete User page= and
+   hide all others.
+#+END_EXAMPLE
+
+#+NAME: delete_user_handler
+#+BEGIN_SRC js
+var deleteAndNavigate = function(email) {
+  console.log("delete and navigate");
+  window.model.deleteUser(email);
+  console.log("user is deleted, before changing the hash");
+  setIndexHash();
+};
+
+function delete_user_handler(email) {
+  console.log("delete user handler");
+
+  hide_all_containers();
+  $('#delete-user-container').removeClass("hidden");
+}
+
+#+END_SRC
+
+* Model
+  The model contains a list of
+  users and operations on the
+  list and user.  Each user is
+  uniquely identified by email.
+  The attributes of a user are
+  =name= and =email=.
+
+** User definition
+#+BEGIN_EXAMPLE
+   A user is constructed with a
+   name and an email.  The
+   operations available on user
+   object or the API exposed by
+   a user object are/is:
+   1. getName
+   2. setName
+   3. getEmail
+   4. setEmail
+
+   
+   It is only through these
+   operations that a user object
+   is manipulated.  Given a user
+   object, one cannot get their
+   hands on the attributes of
+   the user - name and email -
+   directly.  These attributes
+   are closed within an user
+   object. 
+#+END_EXAMPLE
+#+NAME: user_definition
+#+BEGIN_SRC js
+var userMaker = function(na, em) {
+  var name = na;
+  var email = em;
+
+  var getName = function() {
+    return name;
+  };
+
+  var setName = function(na) {
+    name = na;
+  };
+
+  var getEmail = function() {
+    return email;
+  };
+
+  var setEmail = function(em){
+    email = em;
+  };
+
+  var user = {};
+  user.getName = getName;
+  user.getEmail = getEmail;
+  user.setName = setName;
+  user.setEmail = setEmail;
+  return user;
+};
+
+#+END_SRC
+
+** Model Definition
+#+BEGIN_EXAMPLE
+   The model contains a list of
+   users.  The model provides a
+   of operations for interaction
+   with the outside world.
+
+   The API of the model is:
+   1. getUsers
+   2. addUser
+   3. userExists
+   4. findUserByEmail
+   5. deleteUser
+   6. updateUser
+#+END_EXAMPLE
+
+#+NAME: model_maker
+#+BEGIN_SRC js
+var modelMaker = function() {
+  var userList = [];
+
+  var addUser = function(name, email) {
+    userList.push(userMaker(name, email));
+  };
+
+  var getUsers = function() {
+    return userList;
+  };
+
+  function filterByEmail(email) {
+    return userList.filter(function(el) {
+      return el.getEmail() == email;
+    });
+  };
+
+  function filterByEmailCompliment(email) {
+    return userList.filter(function(el) {
+      return el.getEmail() != email;
+    });
+  };
+
+  function findUserByEmail(email) {
+    let usrLst = filterByEmail(email);
+    if (usrLst.length > 0) {
+      return usrLst[0];
+    } else {
+      return undefined;
+    }
+  };
+  
+  var userExists = function(email) {
+    return (filterByEmail(email).length > 0);
+  };
+
+  var deleteUser = function(email) {
+    var newList = filterByEmailCompliment(email);
+    userList = newList;
+    console.log("user deleted")
+  };
+    
+  var updateUser = function(email, new_name, new_email) {
+    let user = findUserByEmail(email);
+    user.setName(new_name);
+    user.setEmail(new_email);
+  };
+
+  var model = {};
+  model.getUsers = getUsers;
+  model.addUser = addUser;
+  model.userExists = userExists;
+  model.findUserByEmail = findUserByEmail;
+  model.deleteUser = deleteUser;
+  model.updateUser = updateUser;
+  return model;
+};
+
+#+END_SRC
+
+* Javascript Tangle                                             :boilerplate:
+#+BEGIN_SRC js :tangle main.js :eval no :noweb yes
+<<hash_routes_registration_handlers_helpers>>
+<<on_load_handlers>>
+<<get_all_users_handler>>
+<<add_user_to_model>>
+<<add_user_handler>>
+<<edit_user_handler>>
+<<delete_user_handler>>
+<<user_definition>>
+<<model_maker>>
+#+END_SRC
+

@@ -1,0 +1,29 @@
+# ;; -*- mode: org; fill-column: 32; -*-
+#+TITLE: Front End for the User Directory Application
+#+DATE: [2017-02-19 Sun]
+#+SETUPFILE: ../../org-templates/level-2.org
+#+TAGS: boilerplate(b)
+#+EXCLUDE_TAGS: boilerplate
+#+OPTIONS: ^:nil
+
+The front end for the user
+directory application is
+realized in series of steps.
+The steps are:
+
+* [[./client-side-routing-as-state-machine.org][Client Side Routing as a State Machine]]
+  The [[./client-side-routing-as-state-machine.org][front end application]] is visualized as a DFA state machine with a set of
+  states ans transitions.  The transitions are the events and transition to
+  each state is accomplished using client side routing.
+
+* [[./separating-model-from-view.org][Separating View and Model]]
+  For the same [[./separating-model-from-view.org][user directory application]], the model is separated from the
+  view.  
+
+* [[./model-view-controller-pattern.org][Model View Controller Pattern]]
+  The design principle of =model view controller= is applied to the [[./model-view-controller-pattern.org][user
+  directory application]].
+
+* [[./model-view-reactive-controller-pattern.org][Controller as Reactive]]
+  The controller implemented in the [[./model-view-reactive-controller-pattern.org][user directory application]] reacts to the
+  outcome of the operation on model via success and failure handlers.

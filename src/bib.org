@@ -3,4 +3,10 @@
 
 * [[https://hacks.mozilla.org/2015/07/es6-in-depth-let-and-const/][ES6 In Depth: let and const]]
 
-* 
+
+* Promises
+  1. [[https://developers.google.com/web/fundamentals/primers/promises#whats-all-the-fuss-about][From google developers]]
+
+
+* Chrome Source code & Architecture
+  1. [[https://archrometects.files.wordpress.com/2009/10/assignment-01-conceptual-architecture-of-google-chrome-archrometects.pdf][pdf]]
