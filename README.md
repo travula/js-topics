@@ -1,2 +1,2 @@
-Run =make= to build the documentation and code.
+Understanding Javascript throught examples
 
